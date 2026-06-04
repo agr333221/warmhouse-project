@@ -16,23 +16,24 @@ jobs:
     permissions:
       contents: write
     steps:
-      - name: Checkout Source Code
+      - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      
-      - name: Get changed UML files
-        id: getfile
+
+      - name: Generate SVG from all .puml files
         run: |
-          echo "files=$(git diff --name-only HEAD^ HEAD | grep '\.puml$' | xargs)" >> $GITHUB_OUTPUT
+          mkdir -p diagrams
+          # Найти все .puml файлы и сгенерировать SVG
+          find . -name "*.puml" -type f | while read file; do
+            echo "Processing $file"
+            docker run --rm -v "$(pwd):/data" plantuml/plantuml -tsvg "/data/$file"
+          done
 
-      - name: Generate SVG Diagrams
-        uses: holowinski/plantuml-github-action@main
-        with:
-          args: -v -tsvg ${{ steps.getfile.outputs.files }}
-
-      - name: Commit and Push Changes
+      - name: Commit and push generated SVG files
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: "chore: Generate SVG files for PlantUML diagrams"
+          commit_message: "chore: auto-generate PlantUML diagrams"
           branch: ${{ github.head_ref }}
+          commit_user_name: github-actions[bot]
+          commit_user_email: github-actions[bot]@users.noreply.github.com

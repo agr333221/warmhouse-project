@@ -44,18 +44,7 @@
 
 Добавьте сюда диаграмму контекста в модели C4.
 
-@startuml
-!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
-
-title Context diagram for Smart Home System (As-Is)
-
-Person(user, "Пользователь", "Управляет отоплением и просматривает температуру")
-System(system, "Монолитное приложение", "Go + PostgreSQL")
-System_Ext(sensor, "Датчик температуры", "Передаёт данные о температуре")
-
-Rel(user, system, "Использует", "HTTPS")
-Rel(system, sensor, "Запрашивает данные", "Синхронный запрос")
-@enduml
+![Диаграмма контекста](diagrams/context-diagram.svg)
 
 Чтобы добавить ссылку в файл Readme.md, нужно использовать синтаксис Markdown. Это делают так:
 

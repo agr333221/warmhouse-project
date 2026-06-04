@@ -1,12 +1,15 @@
 @startuml
 !include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
 
-title Context diagram for Smart Home System (As-Is)
+title Контекстная диаграмма системы «Тёплый дом» (As-Is)
 
-Person(user, "Пользователь", "Управляет отоплением и просматривает температуру")
-System(system, "Монолитное приложение", "Go + PostgreSQL")
-System_Ext(sensor, "Датчик температуры", "Передаёт данные о температуре")
+Person(user, "Пользователь", "Владелец дома, управляет отоплением через веб")
+System_Ext(sensor, "Датчики отопления", "Передают температуру по запросу сервера")
 
-Rel(user, system, "Использует", "HTTPS")
-Rel(system, sensor, "Запрашивает данные", "Синхронный запрос")
+System(monolith, "Go Монолит", "Управление отоплением, мониторинг температуры, веб-интерфейс\nСинхронное взаимодействие, PostgreSQL")
+
+Rel_R(user, monolith, "Управляет отоплением / просматривает температуру", "HTTPS")
+Rel_R(monolith, sensor, "Опрашивает температуру", "Протокол датчиков (MQTT/HTTP)")
+Rel_L(sensor, monolith, "Отдаёт значение температуры", "Протокол датчиков")
+
 @enduml

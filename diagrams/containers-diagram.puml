@@ -1,0 +1,26 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+title Контейнерная диаграмма целевой архитектуры
+
+Person(user, "Пользователь", "Владелец дома")
+System_Ext(device, "IoT-устройства", "Датчики, реле, камеры")
+
+Container(gateway, "API Gateway", "Python/FastAPI", "Единая точка входа, маршрутизация, JWT")
+Container(user_svc, "User Service", "Python/FastAPI", "Управление пользователями и домами")
+Container(device_svc, "Device Service", "Python/FastAPI", "Жизненный цикл устройств, команды")
+Container(telemetry_svc, "Telemetry Service", "Python/FastAPI", "Приём и хранение телеметрии")
+ContainerDb(postgres, "PostgreSQL", "PostgreSQL", "Хранение бизнес-сущностей")
+ContainerDb(broker, "RabbitMQ", "RabbitMQ", "Асинхронная доставка телеметрии и событий")
+
+Rel_R(user, gateway, "HTTPS")
+Rel_R(gateway, user_svc, "gRPC/REST")
+Rel_R(gateway, device_svc, "REST")
+Rel_R(gateway, telemetry_svc, "REST")
+Rel_D(device_svc, postgres, "CRUD")
+Rel_D(user_svc, postgres, "CRUD")
+Rel_R(device, telemetry_svc, "MQTT/HTTP")
+Rel_R(telemetry_svc, broker, "Публикует события")
+Rel_L(device_svc, broker, "Подписывается на команды")
+
+@enduml

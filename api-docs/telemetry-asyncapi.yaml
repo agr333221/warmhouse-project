@@ -1,0 +1,112 @@
+asyncapi: 3.0.0
+info:
+  title: Warm House Events API
+  version: 1.0.0
+  description: |
+    Асинхронное взаимодействие экосистемы «Тёплый дом» через брокер сообщений.
+    Используется там, где ответ не нужен немедленно: поток телеметрии от
+    устройств и доставка команд устройствам.
+
+servers:
+  broker:
+    host: broker:5672
+    protocol: amqp
+    description: Message Broker (RabbitMQ) в docker-compose
+
+channels:
+  telemetryEvents:
+    address: telemetry.events
+    description: Поток измерений телеметрии от устройств
+    messages:
+      telemetryRecorded:
+        $ref: '#/components/messages/TelemetryRecorded'
+
+  deviceCommands:
+    address: device.commands
+    description: Команды устройствам от Device Service
+    messages:
+      deviceCommand:
+        $ref: '#/components/messages/DeviceCommand'
+
+operations:
+  publishTelemetry:
+    action: send
+    channel:
+      $ref: '#/channels/telemetryEvents'
+    summary: Устройства (через MQTT-мост) публикуют измерения
+    messages:
+      - $ref: '#/channels/telemetryEvents/messages/telemetryRecorded'
+
+  consumeTelemetry:
+    action: receive
+    channel:
+      $ref: '#/channels/telemetryEvents'
+    summary: Telemetry Service и Scenario Service потребляют измерения
+    messages:
+      - $ref: '#/channels/telemetryEvents/messages/telemetryRecorded'
+
+  sendDeviceCommand:
+    action: send
+    channel:
+      $ref: '#/channels/deviceCommands'
+    summary: Device Service публикует команды устройствам
+    messages:
+      - $ref: '#/channels/deviceCommands/messages/deviceCommand'
+
+components:
+  messages:
+    TelemetryRecorded:
+      name: TelemetryRecorded
+      title: Измерение телеметрии
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/TelemetryPayload'
+      examples:
+        - name: temperature
+          summary: Измерение температуры
+          payload:
+            device_id: "3e2d1c0b-9a8f-7e6d-5c4b-3a2f1e0d9c8b"
+            metric: "temperature"
+            value: 22.7
+            unit: "°C"
+            recorded_at: "2026-07-06T10:00:00Z"
+
+    DeviceCommand:
+      name: DeviceCommand
+      title: Команда устройству
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/DeviceCommandPayload'
+      examples:
+        - name: setTemperature
+          summary: Установка целевой температуры
+          payload:
+            command_id: "9d8c7b6a-5e4f-3d2c-1b0a-9f8e7d6c5b4a"
+            device_id: "3e2d1c0b-9a8f-7e6d-5c4b-3a2f1e0d9c8b"
+            command: "set_target_temperature"
+            params:
+              value: 22.5
+            issued_at: "2026-07-06T10:00:00Z"
+
+  schemas:
+    TelemetryPayload:
+      type: object
+      properties:
+        device_id: { type: string, format: uuid }
+        metric: { type: string, description: "temperature, humidity, door_state..." }
+        value: { type: number }
+        unit: { type: string }
+        recorded_at: { type: string, format: date-time }
+      required: [device_id, metric, value, recorded_at]
+
+    DeviceCommandPayload:
+      type: object
+      properties:
+        command_id: { type: string, format: uuid }
+        device_id: { type: string, format: uuid }
+        command: { type: string }
+        params:
+          type: object
+          additionalProperties: true
+        issued_at: { type: string, format: date-time }
+      required: [command_id, device_id, command, issued_at]

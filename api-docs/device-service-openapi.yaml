@@ -1,0 +1,273 @@
+openapi: 3.0.3
+info:
+  title: Device Service API
+  description: |
+    REST API микросервиса управления устройствами экосистемы «Тёплый дом».
+    Синхронное взаимодействие: используется, когда клиенту (веб-приложению или
+    другому микросервису) нужен немедленный ответ.
+  version: 1.0.0
+servers:
+  - url: http://localhost:8082/api/v1
+    description: Локальное окружение (docker-compose)
+tags:
+  - name: devices
+    description: Управление устройствами
+
+paths:
+  /devices:
+    post:
+      tags: [devices]
+      summary: Регистрация нового устройства
+      operationId: createDevice
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceCreate'
+            examples:
+              heatingRelay:
+                summary: Реле отопления
+                value:
+                  type_id: "5f7b1c9e-2d3a-4b8f-9c1d-7e6a5b4c3d2e"
+                  house_id: "0a1b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d"
+                  serial_number: "WH-RELAY-000123"
+                  name: "Реле отопления, 1 этаж"
+                  location: "Living Room"
+      responses:
+        '201':
+          description: Устройство зарегистрировано
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Device'
+              examples:
+                created:
+                  $ref: '#/components/examples/DeviceExample'
+        '400':
+          description: Некорректное тело запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                badRequest:
+                  value: { code: 400, message: "serial_number is required" }
+        '409':
+          description: Устройство с таким серийным номером уже зарегистрировано
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                conflict:
+                  value: { code: 409, message: "device with serial WH-RELAY-000123 already exists" }
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /devices/{deviceId}:
+    get:
+      tags: [devices]
+      summary: Получение информации об устройстве
+      operationId: getDevice
+      parameters:
+        - $ref: '#/components/parameters/DeviceId'
+      responses:
+        '200':
+          description: Информация об устройстве
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Device'
+              examples:
+                device:
+                  $ref: '#/components/examples/DeviceExample'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /devices/{deviceId}/state:
+    patch:
+      tags: [devices]
+      summary: Обновление состояния устройства
+      operationId: updateDeviceState
+      parameters:
+        - $ref: '#/components/parameters/DeviceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceStateUpdate'
+            examples:
+              turnOn:
+                value: { status: "on" }
+      responses:
+        '200':
+          description: Состояние обновлено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Device'
+              examples:
+                device:
+                  $ref: '#/components/examples/DeviceExample'
+        '400':
+          description: Недопустимое состояние
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                badState:
+                  value: { code: 400, message: "status must be one of: on, off" }
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /devices/{deviceId}/commands:
+    post:
+      tags: [devices]
+      summary: Отправка команды устройству
+      description: |
+        Команда ставится в очередь (топик device.commands брокера сообщений)
+        и выполняется асинхронно. Клиент получает идентификатор команды
+        и может отслеживать её статус.
+      operationId: sendDeviceCommand
+      parameters:
+        - $ref: '#/components/parameters/DeviceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceCommand'
+            examples:
+              setTemperature:
+                value:
+                  command: "set_target_temperature"
+                  params: { value: 22.5 }
+      responses:
+        '202':
+          description: Команда принята в обработку
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommandAccepted'
+              examples:
+                accepted:
+                  value:
+                    command_id: "9d8c7b6a-5e4f-3d2c-1b0a-9f8e7d6c5b4a"
+                    status: "pending"
+        '400':
+          description: Неизвестная команда или некорректные параметры
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+components:
+  parameters:
+    DeviceId:
+      name: deviceId
+      in: path
+      required: true
+      description: Уникальный идентификатор устройства
+      schema:
+        type: string
+        format: uuid
+
+  responses:
+    NotFound:
+      description: Устройство не найдено
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            notFound:
+              value: { code: 404, message: "device not found" }
+    InternalError:
+      description: Внутренняя ошибка сервера
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            internal:
+              value: { code: 500, message: "internal server error" }
+
+  schemas:
+    Device:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        type_id: { type: string, format: uuid, description: "Тип устройства (FK -> DeviceType)" }
+        house_id: { type: string, format: uuid, description: "Дом (FK -> House)" }
+        serial_number: { type: string }
+        name: { type: string }
+        status: { type: string, enum: [on, off, offline], description: "Текущее состояние" }
+        location: { type: string, description: "Комната/место установки" }
+        registered_at: { type: string, format: date-time }
+        last_seen_at: { type: string, format: date-time, nullable: true }
+      required: [id, type_id, house_id, serial_number, name, status]
+
+    DeviceCreate:
+      type: object
+      properties:
+        type_id: { type: string, format: uuid }
+        house_id: { type: string, format: uuid }
+        serial_number: { type: string }
+        name: { type: string }
+        location: { type: string }
+      required: [type_id, house_id, serial_number, name]
+
+    DeviceStateUpdate:
+      type: object
+      properties:
+        status: { type: string, enum: [on, off] }
+      required: [status]
+
+    DeviceCommand:
+      type: object
+      properties:
+        command: { type: string, description: "Имя команды (turn_on, turn_off, set_target_temperature, open_gate...)" }
+        params:
+          type: object
+          additionalProperties: true
+          description: Параметры команды
+      required: [command]
+
+    CommandAccepted:
+      type: object
+      properties:
+        command_id: { type: string, format: uuid }
+        status: { type: string, enum: [pending] }
+      required: [command_id, status]
+
+    Error:
+      type: object
+      properties:
+        code: { type: integer }
+        message: { type: string }
+      required: [code, message]
+
+  examples:
+    DeviceExample:
+      summary: Устройство
+      value:
+        id: "3e2d1c0b-9a8f-7e6d-5c4b-3a2f1e0d9c8b"
+        type_id: "5f7b1c9e-2d3a-4b8f-9c1d-7e6a5b4c3d2e"
+        house_id: "0a1b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d"
+        serial_number: "WH-RELAY-000123"
+        name: "Реле отопления, 1 этаж"
+        status: "on"
+        location: "Living Room"
+        registered_at: "2026-07-01T10:00:00Z"
+        last_seen_at: "2026-07-06T09:58:12Z"

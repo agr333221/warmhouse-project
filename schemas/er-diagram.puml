@@ -1,0 +1,101 @@
+@startuml er-diagram
+
+title ER-диаграмма экосистемы «Тёплый дом»
+
+hide circle
+skinparam linetype ortho
+
+entity "User\n(Пользователь)" as user {
+  * id : uuid <<PK>>
+  --
+  * email : varchar(255) <<unique>>
+  * password_hash : varchar(255)
+  * name : varchar(100)
+  phone : varchar(20)
+  * created_at : timestamptz
+}
+
+entity "House\n(Дом)" as house {
+  * id : uuid <<PK>>
+  --
+  * user_id : uuid <<FK -> User>>
+  * address : varchar(255)
+  latitude : numeric(9,6)
+  longitude : numeric(9,6)
+  timezone : varchar(50)
+  * created_at : timestamptz
+}
+
+entity "DeviceType\n(Тип устройства)" as deviceType {
+  * id : uuid <<PK>>
+  --
+  * name : varchar(100)
+  * category : varchar(50)
+  description : text
+  protocol : varchar(50)
+  manufacturer : varchar(100)
+}
+
+entity "Module\n(Модуль)" as module {
+  * id : uuid <<PK>>
+  --
+  * name : varchar(100)
+  * description : text
+  * price : numeric(10,2)
+}
+
+entity "Device\n(Устройство)" as device {
+  * id : uuid <<PK>>
+  --
+  * type_id : uuid <<FK -> DeviceType>>
+  * house_id : uuid <<FK -> House>>
+  module_id : uuid <<FK -> Module>>
+  * serial_number : varchar(100) <<unique>>
+  * name : varchar(100)
+  * status : varchar(20)
+  location : varchar(100)
+  * registered_at : timestamptz
+  last_seen_at : timestamptz
+}
+
+entity "TelemetryData\n(Телеметрия)" as telemetry {
+  * id : bigserial <<PK>>
+  --
+  * device_id : uuid <<FK -> Device>>
+  * metric : varchar(50)
+  * value : numeric
+  unit : varchar(20)
+  * recorded_at : timestamptz
+}
+
+entity "Scenario\n(Сценарий)" as scenario {
+  * id : uuid <<PK>>
+  --
+  * house_id : uuid <<FK -> House>>
+  * name : varchar(100)
+  * trigger : jsonb
+  * actions : jsonb
+  * is_active : boolean
+}
+
+' Один пользователь может иметь несколько домов,
+' каждый дом принадлежит одному пользователю
+user ||--o{ house : "владеет"
+
+' Один дом содержит несколько устройств,
+' каждое устройство принадлежит одному дому
+house ||--o{ device : "содержит"
+
+' Один тип описывает множество устройств
+deviceType ||--o{ device : "классифицирует"
+
+' Один модуль (комплект) включает несколько устройств
+module |o--o{ device : "входит в комплект"
+
+' Одно устройство генерирует множество записей телеметрии
+device ||--o{ telemetry : "генерирует"
+
+' Один дом имеет несколько сценариев автоматизации
+house ||--o{ scenario : "автоматизируется"
+
+@enduml

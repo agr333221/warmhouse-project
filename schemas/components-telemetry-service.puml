@@ -1,0 +1,29 @@
+@startuml components-telemetry-service
+!include <C4/C4_Component>
+
+LAYOUT_WITH_LEGEND()
+
+title Диаграмма компонентов (C4 Level 3) — Telemetry Service
+
+Container(apiGateway, "API Gateway", "Nginx / Kong", "Единая точка входа")
+ContainerQueue(broker, "Message Broker", "Kafka / RabbitMQ", "Асинхронный обмен")
+ContainerDb(telemetryDb, "Telemetry DB", "PostgreSQL / TimescaleDB", "Временные ряды телеметрии")
+
+Container_Boundary(telemetryService, "Telemetry Service") {
+    Component(telemetryApi, "Telemetry API", "REST Controller", "HTTP-эндпоинты: запрос истории и последних значений телеметрии, приём телеметрии по HTTP")
+    Component(ingestConsumer, "Telemetry Consumer", "Messaging Adapter", "Подписка на топик telemetry.events, приём потока данных с устройств")
+    Component(processor, "Telemetry Processor", "Service", "Валидация, нормализация и агрегация входящих измерений")
+    Component(queryService, "Telemetry Query Service", "Service", "Выборки истории, последних значений, агрегатов")
+    Component(telemetryRepo, "Telemetry Repository", "Repository", "Доступ к данным телеметрии")
+}
+
+Rel(apiGateway, telemetryApi, "REST-запросы", "HTTPS/JSON")
+Rel(broker, ingestConsumer, "telemetry.events", "AMQP/Kafka")
+Rel(ingestConsumer, processor, "Передаёт измерения")
+Rel(telemetryApi, processor, "Приём телеметрии по HTTP")
+Rel(telemetryApi, queryService, "Запросы данных")
+Rel(processor, telemetryRepo, "Сохраняет измерения")
+Rel(queryService, telemetryRepo, "Читает")
+Rel(telemetryRepo, telemetryDb, "SQL")
+
+@enduml

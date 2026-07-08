@@ -1,0 +1,199 @@
+openapi: 3.0.3
+info:
+  title: Telemetry Service API
+  description: |
+    REST API микросервиса телеметрии экосистемы «Тёплый дом».
+    Выдаёт последние значения и историю измерений устройств.
+    Приём потока телеметрии выполняется асинхронно через брокер сообщений
+    (см. telemetry-asyncapi.yaml), но также поддерживается приём по HTTP.
+  version: 1.0.0
+servers:
+  - url: http://localhost:8083/api/v1
+    description: Локальное окружение (docker-compose)
+tags:
+  - name: telemetry
+    description: Телеметрия устройств
+
+paths:
+  /telemetry:
+    post:
+      tags: [telemetry]
+      summary: Приём измерения телеметрии
+      operationId: ingestTelemetry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TelemetryCreate'
+            examples:
+              temperature:
+                value:
+                  device_id: "3e2d1c0b-9a8f-7e6d-5c4b-3a2f1e0d9c8b"
+                  metric: "temperature"
+                  value: 22.7
+                  unit: "°C"
+                  recorded_at: "2026-07-06T10:00:00Z"
+      responses:
+        '201':
+          description: Измерение сохранено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Telemetry'
+        '400':
+          description: Некорректное измерение
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                badRequest:
+                  value: { code: 400, message: "device_id is required" }
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /telemetry/{deviceId}/latest:
+    get:
+      tags: [telemetry]
+      summary: Последнее значение телеметрии устройства
+      operationId: getLatestTelemetry
+      parameters:
+        - $ref: '#/components/parameters/DeviceId'
+        - name: metric
+          in: query
+          required: false
+          description: Фильтр по метрике (temperature, humidity...)
+          schema: { type: string }
+      responses:
+        '200':
+          description: Последнее измерение
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Telemetry'
+              examples:
+                latest:
+                  value:
+                    id: 421337
+                    device_id: "3e2d1c0b-9a8f-7e6d-5c4b-3a2f1e0d9c8b"
+                    metric: "temperature"
+                    value: 22.7
+                    unit: "°C"
+                    recorded_at: "2026-07-06T10:00:00Z"
+        '404':
+          description: Телеметрия для устройства не найдена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                notFound:
+                  value: { code: 404, message: "no telemetry for device" }
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /telemetry/{deviceId}:
+    get:
+      tags: [telemetry]
+      summary: История телеметрии устройства за период
+      operationId: getTelemetryHistory
+      parameters:
+        - $ref: '#/components/parameters/DeviceId'
+        - name: from
+          in: query
+          required: false
+          schema: { type: string, format: date-time }
+          description: Начало периода (по умолчанию — сутки назад)
+        - name: to
+          in: query
+          required: false
+          schema: { type: string, format: date-time }
+          description: Конец периода (по умолчанию — сейчас)
+        - name: metric
+          in: query
+          required: false
+          schema: { type: string }
+      responses:
+        '200':
+          description: Список измерений
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Telemetry'
+              examples:
+                history:
+                  value:
+                    - id: 421336
+                      device_id: "3e2d1c0b-9a8f-7e6d-5c4b-3a2f1e0d9c8b"
+                      metric: "temperature"
+                      value: 22.4
+                      unit: "°C"
+                      recorded_at: "2026-07-06T09:55:00Z"
+                    - id: 421337
+                      device_id: "3e2d1c0b-9a8f-7e6d-5c4b-3a2f1e0d9c8b"
+                      metric: "temperature"
+                      value: 22.7
+                      unit: "°C"
+                      recorded_at: "2026-07-06T10:00:00Z"
+        '404':
+          description: Устройство не найдено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+components:
+  parameters:
+    DeviceId:
+      name: deviceId
+      in: path
+      required: true
+      description: Уникальный идентификатор устройства
+      schema:
+        type: string
+        format: uuid
+
+  responses:
+    InternalError:
+      description: Внутренняя ошибка сервера
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            internal:
+              value: { code: 500, message: "internal server error" }
+
+  schemas:
+    Telemetry:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        device_id: { type: string, format: uuid }
+        metric: { type: string }
+        value: { type: number }
+        unit: { type: string }
+        recorded_at: { type: string, format: date-time }
+      required: [id, device_id, metric, value, recorded_at]
+
+    TelemetryCreate:
+      type: object
+      properties:
+        device_id: { type: string, format: uuid }
+        metric: { type: string }
+        value: { type: number }
+        unit: { type: string }
+        recorded_at: { type: string, format: date-time }
+      required: [device_id, metric, value]
+
+    Error:
+      type: object
+      properties:
+        code: { type: integer }
+        message: { type: string }
+      required: [code, message]

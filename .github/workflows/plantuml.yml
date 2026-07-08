@@ -23,7 +23,7 @@ jobs:
 
       - name: Generate SVG from all .puml files
         run: |
-          mkdir -p diagrams
+          mkdir -p schemas
           # Найти все .puml файлы и сгенерировать SVG
           find . -name "*.puml" -type f | while read file; do
             echo "Processing $file"

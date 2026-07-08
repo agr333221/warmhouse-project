@@ -1,0 +1,51 @@
+@startuml containers
+!include <C4/C4_Container>
+
+LAYOUT_WITH_LEGEND()
+
+title Диаграмма контейнеров (C4 Level 2) — экосистема «Тёплый дом» (To-Be)
+
+Person(user, "Пользователь", "Владелец дома. Самостоятельно подключает устройства, настраивает сценарии, просматривает телеметрию")
+
+System_Boundary(warmhouse, "Экосистема «Тёплый дом» (SaaS)") {
+    Container(webApp, "Web-приложение", "SPA (JS/TS)", "Личный кабинет пользователя: управление домами, устройствами, сценариями, просмотр телеметрии")
+    Container(apiGateway, "API Gateway", "Nginx / Kong", "Единая точка входа. Маршрутизация, аутентификация, rate limiting")
+
+    Container(userService, "User Service (монолит As-Is)", "Go", "Управление пользователями и домами. Существующий монолит, из которого постепенно выносится функциональность")
+    Container(deviceService, "Device Service", "Java", "Реестр устройств и их типов, управление состоянием, отправка команд устройствам")
+    Container(telemetryService, "Telemetry Service", "Python", "Приём, хранение и выдача телеметрии с устройств")
+    Container(scenarioService, "Scenario Service", "Go", "Пользовательские сценарии автоматизации (правила «если-то»)")
+
+    ContainerQueue(broker, "Message Broker", "Kafka / RabbitMQ", "Асинхронный обмен: команды устройствам, события телеметрии")
+
+    ContainerDb(userDb, "User DB", "PostgreSQL", "Пользователи, дома")
+    ContainerDb(deviceDb, "Device DB", "PostgreSQL", "Устройства, типы устройств, модули")
+    ContainerDb(telemetryDb, "Telemetry DB", "PostgreSQL / TimescaleDB", "Временные ряды телеметрии")
+    ContainerDb(scenarioDb, "Scenario DB", "PostgreSQL", "Сценарии автоматизации")
+}
+
+System_Ext(devices, "Умные устройства", "Датчики, реле, ворота, камеры — в т.ч. устройства партнёров, подключаемые по стандартным протоколам (MQTT)")
+
+Rel(user, webApp, "Использует", "HTTPS")
+Rel(webApp, apiGateway, "REST-запросы", "HTTPS/JSON")
+
+Rel(apiGateway, userService, "Аутентификация, дома, пользователи", "REST")
+Rel(apiGateway, deviceService, "CRUD устройств, команды", "REST")
+Rel(apiGateway, telemetryService, "Запрос телеметрии", "REST")
+Rel(apiGateway, scenarioService, "CRUD сценариев", "REST")
+
+Rel(userService, userDb, "Читает/пишет", "SQL")
+Rel(deviceService, deviceDb, "Читает/пишет", "SQL")
+Rel(telemetryService, telemetryDb, "Читает/пишет", "SQL")
+Rel(scenarioService, scenarioDb, "Читает/пишет", "SQL")
+
+Rel(deviceService, broker, "Публикует команды устройствам", "device.commands")
+Rel(broker, devices, "Доставляет команды", "MQTT-мост")
+Rel(devices, broker, "Публикует телеметрию и события", "MQTT-мост, telemetry.events")
+Rel(broker, telemetryService, "Поток телеметрии", "telemetry.events")
+Rel(broker, scenarioService, "События для триггеров сценариев", "telemetry.events")
+Rel(scenarioService, deviceService, "Выполняет действия сценария", "REST")
+
+Rel(deviceService, userService, "Проверка принадлежности дома пользователю", "REST")
+
+@enduml

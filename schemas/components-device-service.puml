@@ -1,0 +1,36 @@
+@startuml components-device-service
+!include <C4/C4_Component>
+
+LAYOUT_WITH_LEGEND()
+
+title Диаграмма компонентов (C4 Level 3) — Device Service
+
+Container(apiGateway, "API Gateway", "Nginx / Kong", "Единая точка входа")
+ContainerQueue(broker, "Message Broker", "Kafka / RabbitMQ", "Асинхронный обмен")
+ContainerDb(deviceDb, "Device DB", "PostgreSQL", "Устройства, типы, модули")
+Container(userService, "User Service", "Go", "Пользователи и дома")
+
+Container_Boundary(deviceService, "Device Service") {
+    Component(deviceApi, "Device API", "REST Controller", "HTTP-эндпоинты: CRUD устройств, отправка команд, запрос состояния")
+    Component(commandHandler, "Command Handler", "Service", "Валидация и постановка команд устройствам в очередь, отслеживание статуса выполнения")
+    Component(stateManager, "Device State Manager", "Service", "Актуальное состояние устройств, обработка подтверждений от устройств")
+    Component(registry, "Device Registry", "Service", "Регистрация устройств и модулей, привязка к дому, справочник типов устройств")
+    Component(deviceRepo, "Device Repository", "Repository", "Доступ к данным устройств")
+    Component(brokerPublisher, "Command Publisher", "Messaging Adapter", "Публикация команд в топик device.commands")
+    Component(eventConsumer, "Device Event Consumer", "Messaging Adapter", "Подписка на события устройств (подтверждения, смена статуса)")
+}
+
+Rel(apiGateway, deviceApi, "REST-запросы", "HTTPS/JSON")
+Rel(deviceApi, commandHandler, "Отправка команды")
+Rel(deviceApi, registry, "Регистрация/CRUD устройств")
+Rel(deviceApi, stateManager, "Запрос состояния")
+Rel(commandHandler, brokerPublisher, "Публикует команду")
+Rel(brokerPublisher, broker, "device.commands", "AMQP/Kafka")
+Rel(broker, eventConsumer, "device.events", "AMQP/Kafka")
+Rel(eventConsumer, stateManager, "Обновляет состояние")
+Rel(registry, deviceRepo, "Читает/пишет")
+Rel(stateManager, deviceRepo, "Читает/пишет")
+Rel(deviceRepo, deviceDb, "SQL")
+Rel(registry, userService, "Проверка дома/владельца", "REST")
+
+@enduml

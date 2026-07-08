@@ -193,9 +193,11 @@ func (h *SensorHandler) UpdateSensorValue(c *gin.Context) {
 		return
 	}
 
+	// Value — указатель, чтобы binding:"required" не отвергал нулевое значение
+	// (например, команду выключения с value = 0)
 	var request struct {
-		Value  float64 `json:"value" binding:"required"`
-		Status string  `json:"status" binding:"required"`
+		Value  *float64 `json:"value" binding:"required"`
+		Status string   `json:"status" binding:"required"`
 	}
 
 	if err := c.ShouldBindJSON(&request); err != nil {
@@ -203,7 +205,7 @@ func (h *SensorHandler) UpdateSensorValue(c *gin.Context) {
 		return
 	}
 
-	err = h.DB.UpdateSensorValue(context.Background(), id, request.Value, request.Status)
+	err = h.DB.UpdateSensorValue(context.Background(), id, *request.Value, request.Status)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

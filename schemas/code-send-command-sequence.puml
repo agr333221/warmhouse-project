@@ -1,0 +1,38 @@
+@startuml code-send-command-sequence
+
+title Диаграмма кода (C4 Level 4) — последовательность «Отправка команды устройству»
+
+actor "Пользователь" as user
+participant "Web App" as web
+participant "API Gateway" as gw
+participant "Device API\n(DeviceController)" as api
+participant "Command Handler\n(CommandService)" as cmd
+participant "Device Repository" as repo
+database "Device DB" as db
+queue "Message Broker\n(device.commands)" as broker
+participant "Устройство\n(через MQTT-мост)" as device
+
+user -> web : Нажимает «Включить отопление»
+web -> gw : POST /api/v1/devices/{id}/commands\n{"command": "turn_on"}
+gw -> api : POST /devices/{id}/commands
+api -> api : Валидация запроса
+api -> repo : getDevice(id)
+repo -> db : SELECT * FROM devices WHERE id = ?
+db --> repo : device
+repo --> api : device
+api -> cmd : submit(device, command)
+cmd -> repo : saveCommand(status=PENDING)
+repo -> db : INSERT INTO device_commands
+cmd -> broker : publish(device.commands, {deviceId, command})
+cmd --> api : commandId, status=PENDING
+api --> gw : 202 Accepted {"command_id": "...", "status": "pending"}
+gw --> web : 202 Accepted
+web --> user : «Команда отправлена»
+
+broker -> device : Доставка команды
+device --> broker : publish(device.events, {commandId, status: DONE})
+broker -> cmd : Событие выполнения
+cmd -> repo : updateCommand(status=DONE)
+repo -> db : UPDATE device_commands
+
+@enduml

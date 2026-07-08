@@ -165,12 +165,12 @@ ER - сущности и связи:
 
 Два новых микросервиса, интегрированных с монолитом по HTTP:
 
-- **Device Service (Java 17)** — [apps/device-service](apps/device-service).
+- **Device Service (Java)** — [apps/device-service](apps/device-service).
   Управление устройствами: `GET /api/v1/devices/{id}` (информация об устройстве через API монолита),
   `POST /api/v1/devices/{id}/commands` с телом `{"command": "turn_on" | "turn_off"}`
  (транслирует команду в вызов `PATCH /api/v1/sensors/{id}/value` монолита). Порт 8082.
 
-- **Telemetry Service (Python 3.12, FastAPI)** — [apps/telemetry-service](apps/telemetry-service).
+- **Telemetry Service (Python, FastAPI)** — [apps/telemetry-service](apps/telemetry-service).
   Телеметрия: `POST /api/v1/telemetry` (приём измерения), `GET /api/v1/telemetry/{deviceId}/latest`,
   `GET /api/v1/telemetry/{deviceId}` (история). Каждые 10 секунд читает показания сенсоров
   из API монолита и сохраняет их как телеметрию и функциональность мониторинга постепенно переезжает из монолита.

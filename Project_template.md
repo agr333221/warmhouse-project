@@ -62,6 +62,8 @@
 
 Диаграмма контекста (C4 Level 1, As-Is): [schemas/context.svg](schemas/context.puml)
 
+![Диаграмма контекста](schemas/context.svg)
+
 # Задание 2. Проектирование микросервисной архитектуры
 
 Целевая архитектура построена по принципу Strangler Fig:

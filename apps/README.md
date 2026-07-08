@@ -68,8 +68,8 @@ A Postman collection is provided for testing the API.
 | Сервис | Язык | Порт | Назначение |
 |---|---|---|---|
 | `temperature-api` | Go | 8081 | Имитация удалённого датчика: `GET /temperature?location=` возвращает случайную температуру |
-| `device-service` | Java 17 | 8082 | Управление устройствами: `GET /api/v1/devices/{id}`, `POST /api/v1/devices/{id}/commands` (`turn_on` / `turn_off`) — работает через API монолита |
-| `telemetry-service` | Python 3.12 (FastAPI) | 8083 | Телеметрия: `POST /api/v1/telemetry`, `GET /api/v1/telemetry/{deviceId}/latest`, `GET /api/v1/telemetry/{deviceId}`; фоновый опрос сенсоров монолита каждые 10 секунд |
+| `device-service` | Java | 8082 | Управление устройствами: `GET /api/v1/devices/{id}`, `POST /api/v1/devices/{id}/commands` (`turn_on` / `turn_off`) — работает через API монолита |
+| `telemetry-service` | Python (FastAPI) | 8083 | Телеметрия: `POST /api/v1/telemetry`, `GET /api/v1/telemetry/{deviceId}/latest`, `GET /api/v1/telemetry/{deviceId}`; фоновый опрос сенсоров монолита каждые 10 секунд |
 
 Запуск всего стека:
 

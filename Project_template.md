@@ -33,9 +33,9 @@
 - **Развёртывание:** любое обновление требует остановки и перезапуска приложения.
 - **Нагрузка сейчас:** 100 клиентов и 100 подключённых модулей отопления.
 
-### 3. Определение доменов и границы контекстов
+### 3. Определение доменов и границ контекстов
 
-Выделенные домены и ограниченные контексты (bounded contexts):
+Выделенные домены и ограниченные контексты:
 
 | Домен | Контекст | As-Is / To-Be |
 |---|---|---|
@@ -60,7 +60,7 @@
 
 ### 5. Визуализация контекста системы — диаграмма С4
 
-Диаграмма контекста (C4 Level 1, As-Is): [schemas/context.puml](schemas/context.puml)
+Диаграмма контекста (C4 Level 1, As-Is): [schemas/context.svg](schemas/context.puml)
 
 # Задание 2. Проектирование микросервисной архитектуры
 
@@ -76,22 +76,36 @@
 
 [schemas/containers.puml](schemas/containers.puml)
 
+![Диаграмма контейнеров](schemas/containers.svg)
+
+
 **Диаграмма компонентов (Components)**
 
-- Device Service: [schemas/components-device-service.puml](schemas/components-device-service.puml)
-- Telemetry Service: [schemas/components-telemetry-service.puml](schemas/components-telemetry-service.puml)
+Device Service: [schemas/components-device-service.puml](schemas/components-device-service.puml)
+
+![Device Service](schemas/components-device-service.svg)
+
+
+Telemetry Service: [schemas/components-telemetry-service.puml](schemas/components-telemetry-service.puml)
+
+![Telemetry Service](schemas/components-telemetry-service.svg)
+
 
 **Диаграмма кода (Code)**
 
 Последовательность "Отправка команды устройству":
   [schemas/code-send-command-sequence.puml](schemas/code-send-command-sequence.puml)
 
+![Отправка команды устройству](schemas/code-send-command-sequence.svg)
+
 # Задание 3. Разработка ER-диаграммы
 
 ER-диаграмма:
   [schemas/er-diagram.puml](schemas/er-diagram.puml)
 
-Ключевые сущности и связи:
+![ER-диаграмма](schemas/er-diagram.svg)
+
+ER - сущности и связи:
 
 - **User — House:** один-ко-многим (пользователь владеет несколькими домами, дом принадлежит одному пользователю)
 - **House — Device:** один-ко-многим (дом содержит несколько устройств, устройство принадлежит одному дому).
@@ -101,7 +115,7 @@ ER-диаграмма:
 - **Device — TelemetryData:** один-ко-многим (устройство генерирует множество записей телеметрии)
 - **House — Scenario:** один-ко-многим (для дома настраивается несколько сценариев автоматизации)
 
-# Задание 4. Создание и документирование API
+# Задание 4. Документирование API
 
 ### 1. Тип API
 

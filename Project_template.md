@@ -188,8 +188,7 @@ curl http://localhost:8082/api/v1/devices/1
 
 ```
 # команда устройству через Device Service
-curl -X POST http://localhost:8082/api/v1/devices/1/commands \
-  -H "Content-Type: application/json" -d '{"command": "turn_on"}'
+curl -X POST http://localhost:8082/api/v1/devices/1/commands -H "Content-Type: application/json" -d '{"command": "turn_on"}'
 ```
 
 ```
